@@ -1,0 +1,56 @@
+Guide to setup de ROS2 system integrated with Deep RL:
+
+LattePanda:
+
+Open a terminal and go to the folder ~/ros2_rl_ws, then run:
+	source ~/ros2_rl_ws/install/setup.bash
+
+To compile any changes to the code, inside this folder run:
+	colcon build
+
+To initiate the system, first turn on the aggregator node by running:
+	ros2 run rl_package aggregator
+
+Select the working mode, either the myosuite only environment or the mixed environment (with myosuite and the motor)
+
+Open a new terminal and initiate the motor or the motor simulator. To initiate the motor simulator run:
+	source ~/ros2_rl_ws/install/setup.bash
+	ros2 run rl_package exo_publisher
+
+Workstation:
+
+Open a terminal and go to the folder ~/jorge_gomez/ros2_rl_ws
+
+Activate the miniconda environment by running:
+	conda activate ros2rl
+
+Source the workspace by running:
+	source ~/jorge_gomez/ros2_rl_ws/install/setup.bash
+
+To compile any changes to the code, as we must merge the ROS2 packages with the conda packages, we must run:
+	colcon build --merge-install
+
+Open a new terminal and initiate the rl node by running:
+	conda activate ros2rl
+	source ~/jorge_gomez/ros2_rl_ws/install/setup.bash
+	ros2 run rl_package rl_node
+
+To initiate the system, turn on the myosuite environment node by running:
+	ros2 run rl_package myosuite_publisher
+
+The myosuite_publisher kicks off the whole system by running an initial message
+
+If the Workstation is facing problems between ROS2 and miniconda, go to the folder ~/jorge_gomez/ros2_rl_ws
+ and run:
+	conda activate ros2rl
+	colcon build --merge-install --cmake-args -DPYTHON_EXECUTABLE=$(which python)
+
+After this, if the conda environment has packages not found by ROS 2, extend the Python path:
+	export PYTHONPATH=$CONDA_PREFIX/lib/python3.10/site-packages:$PYTHONPATH
+	source /opt/ros/humble/setup.bash
+	source ~/jorge_gomez/ros2_rl_ws/install/setup.bash
+
+
+To check the frequency of the messages run in a new terminal:
+	source ~/jorge_gomez/ros2_rl_ws/install/setup.bash
+	ros2 topic hz /rl/observations

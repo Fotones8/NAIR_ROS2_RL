@@ -1,0 +1,19 @@
+Turning on the LattePanda:
+
+(Optional): Connect the HDMI via HDMI to a monitor and via USB ports to a keyboard and mouse
+
+Connect a charger (5V 2A) to the current and to the micro-usb port found at the same side of the LattePanda of the Ethernet port and the SD card port.
+
+A blue light will appear in the top side of the LattePanda, and a red light will appear in its underside. 
+Wait until both lights turn down, first the blue one and then the red one.
+
+Next to the Ethernet cable, you will find two buttons. Facing the side where the buttons are found, press the right button (the one further from the corner where the Ethernet port is) for 2 seconds.
+
+A red light will turn on in the underside of the LattePanda, and in the monitor you will see the LattePanda turning on.
+
+While the LattePanda is turned on, the red light will remain turned on.
+
+A password is needed to turn off the LattePanda if another program is still running. The password is: legreplica
+
+An Ubuntu 22.04 will be booted up, with ROS2 Humble installed.
+

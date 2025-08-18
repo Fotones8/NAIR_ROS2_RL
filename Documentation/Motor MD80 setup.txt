@@ -1,0 +1,139 @@
+# Guide to setup the MD80 motor with the ROS2 Candle:
+
+## Hardware setup:
+
+This section explains how to physically connect the motor to a computer, Raspberry Pi or LattePanda (using the materials available at NAIR at 08/08/2025).
+
+First, take the MAB0990 driver. This device is a black rectangular box of 7x3.5x1.5 cm with an M7 written in the larger surface. Connect a cable to the USB-C port into an USB port in your computer.
+
+In the other side of the MAB0990 driver you will find two ports. Connect one of them with the same port in the MD80 motor. The other port in the MAB0990 driver will be connected to the batteries.
+
+There is a cable that can be connected into this port and is divided into two yellow connectors, and plug it into the MAB0990 port. This cable presents a red button as an emergency power switch.
+
+These yellow connectors can be connected to two 12 V batteries. The yellow connectors present a specific shape that only allows the connections with the right polarity.
+
+Look for a switch in the lateral of the MAB0990 driver and set the ON position.
+
+If the setup is correct, you will see a periodic green light in the motor, just under the cable connected to the MAB0990.
+
+## Software setup:
+
+First of all, you need installed in Ubuntu 22.04 ROS2 Humble (https://docs.ros.org/en/humble/Installation.html), the ROS2 Candle package (https://github.com/mabrobotics/candle_ros2 and https://mabrobotics.github.io/MD80-x-CANdle-Documentation/software_package/legacy/Quick%20startup%20guide%20ROS2.html) and MDtool (https://mabrobotics.github.io/MD80-x-CANdle-Documentation/software_package/legacy/MDTOOL.html)
+
+### MDtool
+
+You can find a tutorial on the use of the MDtool in: https://mabrobotics.github.io/MD80-x-CANdle-Documentation/software_package/legacy/MDTOOL.html
+
+Once the MDtool has been installed, you must configure MDtool for the USB communication bus by running in a terminal:
+	mdtool bus USB
+
+Once the motor has been connected to the computer, you can check if it the device is accesible by running:
+	mdtool ping
+
+This command should produce an output similar to:
+	[MDTOOL] MDtool version: v1.5.4
+	[CANDLE] CANdle library version: v3.5.4
+	[CANDLE] Device firmware version: v2.2.1 
+	[CANDLE] CANdle at /dev/ttyACM0, ID: 0xac129335c12a5ad8 ready (USB)
+	[CANDLE] Starting pinging drives at baudrate: 1M
+	[CANDLE] Found drives.
+	[CANDLE] 1: ID = 308 (0x134)
+
+In this output, we can see that we have a motor communicating with a baudrate of 1M and an ID of 308, which we will need to interact with the motor.
+
+### ROS2
+
+You can find a tutorial on the use of the ROS2 candle node in: https://mabrobotics.github.io/MD80-x-CANdle-Documentation/software_package/legacy/Quick%20startup%20guide%20ROS2.html
+
+#### ROS2 setup
+
+To check if the ROS2 node to control the motor is accesible you can run a command to find the appropiate package:
+	ros2 pkg list | grep "candle"
+
+This should output the package "candle_ros2".
+
+In the terminal, go to a ROS2 workspace (like ~/ros2_rl_ws in the LattePanda) and source the environment by running:
+	source install/setup.bash
+
+For more information on how to run the candle_ros_node you can run the following command. This will start the node, and therefore after this you will have to press Ctrl+C to close it.
+	ros2 run candle_ros2 candle_ros2_node --help
+
+We need to run the candle_ros2_node with arguments regarding the type of bus communication and the baudrate. As we have seen with the mdtool ping that we are using a USB with a baudrate of 1M, we will run:
+	ros2 run candle_ros2 candle_ros2_node USB 1M
+
+This should output a message saying that the candle_ros2_node v1.3.2 has started. 
+
+As the node has started, we must open a new terminal to communicate with the ros2 node. This is a manual way of communication, by running commands through a terminal, but we could also create another ROS2 node to communicate with the candle_ros2_node.
+
+Firstly, the node should be informed which drives should be present on the FDCAN bus. This can be done via /candle_ros2_node/add_md80s service. Note: Do not forget to source your ros2 workspace in new terminal window by going to the workspace and running "source install/setup.bash". By using the MDtool, we know that our motor has an ID = 308, and therefore we will run:
+
+	ros2 service call /candle_ros2_node/add_md80s candle_ros2/srv/AddMd80s "{drive_ids: [308]}"
+
+This should produce the following output, informing that the driver has been successfully contacted, and was added to the node’s drives list:
+
+	response:
+	candle_ros2.srv.AddMd80s_Response(drives_success=[True], total_number_of_drives=1)
+
+Next the desired control mode should be selected. This is accomplished with /candle_ros2_node/set_mode_md80s service. The possible modes are "IMPEDANCE", "POSITION_PID", "VELOCITY_PID" and "RAW_TORQUE". As we want to control the motor via torque using the RL, we will run:
+
+	ros2 service call /candle_ros2_node/set_mode_md80s candle_ros2/srv/SetModeMd80s "{drive_ids: [308], mode:["RAW_TORQUE"]}"
+
+This should produce the following output, informing that the driver mode has been set correctly:
+
+	response:
+	candle_ros2.srv.SetModeMd80s_Response(drives_success=[True])
+
+Often when starting, setting a current position to zero is desired. This can be accomplished with a call to /candle_ros2_node/zero_md80s service.
+
+	ros2 service call /candle_ros2_node/zero_md80s candle_ros2/srv/GenericMd80Msg "{drive_ids:[308]}"
+
+#### ROS2 enabling/disabling drivers
+
+Using services /candle_ros2_node/enable_md80s and /candle_ros2_node/disable_md80s the drives and the node publishers and subscribers can be enabled/disabled. After enabling, the node will publish current joint states to /joint_states at a frequency dependent on a currently chosen communication bus and speed mode. Joint names are generated based on drivie ID, for example, drive with id 308 will be called Joint 308.
+
+The structure of the JointState message is:
+
+	std_msgs/Header header
+
+	string[] name
+	float64[] position
+	float64[] velocity
+	float64[] effort
+
+In the string name, you will find "Joint 308" indicating the ID of the motor.
+
+The node will also listen for the messages on topics for controlling the drivers. All of the above topics are listened to all the time, but currently applied settings are dependent on the MD controller mode set before enabling.
+
+To enable the drivers, run:
+
+	ros2 service call /candle_ros2_node/enable_md80s candle_ros2/srv/GenericMd80Msg "{drive_ids:[308]}"
+
+To disable the drivers, run:
+
+	ros2 service call /candle_ros2_node/disable_md80s candle_ros2/srv/GenericMd80Msg "{drive_ids:[308]}"
+
+#### Controlling drivers
+
+Setting desired position, velocity, and torque is done via /md80/motion_command topic. Note that for it to take effect, all fields in the message should be correctly filled. For example, to move the driver with ID 308 in RAW_TORQUE mode, it is possible to use the following command:
+
+ros2 topic pub /md80/motion_command candle_ros2/MotionCommand "{drive_ids: [308], target_position: [0.0], target_velocity: [0.0], target_torque: [0.2]}"
+
+It is recommended, it the motor is not connected to anything else, to start with a torque between -0.2 and 0.2 so that it doesn't apply to much force. This sets a new torque objective, so it applies a continuous torque even after you stop publishing messages.
+
+To see the motor position, velocity and effort, open a new terminal in the ros2 workspace and run:
+
+	source install/setup.bash
+	ros2 topic echo /md80/joint_states
+
+There are another 3 topics to change the configuration of the "IMPEDANCE", "POSITION_PID" and "VELOCITY_PID" modes. For example, to set up custom gains for IMPEDANCE mode for two motors use:
+
+	ros2 topic pub /md80/impedance_command candle_ros2/msg/ImpedanceCommand "{drive_ids: [200, 800], kp: [1.0,1.0]], kd: [0.001,0.001], max_output: [1.0, 1.0]}"
+
+Example set up of custom gains for POSITION PID mode:
+
+	ros2 topic pub /md80/position_pid_command candle_ros2/msg/PositionPidCommand "{drive_ids: [150, 350], position_pid: [{kp: 40.0, ki: 0.5, kd: 0.0, i_windup: 10, max_output: 3.0},{kp: 20.0, ki: 0.5, kd: 0.0, i_windup: 10, max_output: 3.0}], velocity_pid: [{kp: 0.2, ki: 0.3, kd: 0.0, i_windup: 2.0, max_output: 2.0}, {kp: 0.1, ki: 0.1, kd: 0.0, i_windup: 1, max_output: 2.0}]}" 
+
+Example set up of custom gains for VELOCITY PID mode:
+
+	ros2 topic pub /md80/velocity_pid_command candle_ros2/msg/VelocityPidCommand "{drive_ids: [200, 800], velocity_pid: [{kp: 0.2, ki: 0.3, kd: 0.0, i_windup: 2.0, max_output: 2.0}, {kp: 0.1, ki: 0.1, kd: 0.0, i_windup: 1, max_output: 2.0}]}"
+
