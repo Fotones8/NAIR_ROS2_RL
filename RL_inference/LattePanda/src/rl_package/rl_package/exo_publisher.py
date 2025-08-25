@@ -24,26 +24,33 @@ class MinimalPublisher(Node):
         self.subscription  # Prevent unused variable warning
 
         self.id = input('Enter the motor ID as a number: ')
-        
+
         #We publish an initial message to allow the system to start
         msgJoint = JointState() #JointState has a string[] name, double[] position, double[] velocity and double[] effort
-        msgJoint.position = [10.0, 0.0]
-        msgJoint.velocity = [10.0, 0.0]
-        msgJoint.effort = [10.0, 0.0]
+        msgJoint.position = [0.5, 0.0]
+        msgJoint.velocity = [0.1, 0.0]
+        msgJoint.effort = [0.5, 0.0]
         msgJoint.name = ["Joint "+self.id]
         self.publisherJoint_.publish(msgJoint)
+
+        timer_period = 0.01 #seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
 
     def listener_callback(self, msg):
         # Each time we receive a message from the RL, we publish a position in the joint_states, even though this may not be the configuration of the real MD80 ROS node
         # MotionCommand has uint32[] drive_ids, float32[] target_position, float32[] target_velocity, float32[] target_torque
         self.get_logger().info(f'Received torque: "{msg.target_torque}"')
+        
+    
+    def timer_callback(self):
         msgJoint = JointState() #JointState has a string[] name, double[] position, double[] velocity and double[] effort
-        msgJoint.position = [10.0, 0.0]
-        msgJoint.velocity = [10.0, 0.0]
-        msgJoint.effort = [10.0, 0.0]
+        msgJoint.position = [0.5, 0.0]
+        msgJoint.velocity = [0.1, 0.0]
+        msgJoint.effort = [0.5, 0.0]
         msgJoint.name = ["Joint "+self.id]
         self.publisherJoint_.publish(msgJoint)
         self.get_logger().info(f'Publishing position: "{msgJoint.position}"')
+
 
 
 
