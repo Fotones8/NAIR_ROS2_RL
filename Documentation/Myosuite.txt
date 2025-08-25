@@ -1,0 +1,111 @@
+# Myosuite environment tutorial:
+
+**Step 1**: Install Anaconda or miniconda (recommended)
+
+Follow this tutorial: https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer
+
+If the link does not work, what you have to do is download the latest version of Miniconda by opening a terminal and running:
+
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+	
+After that, you install it by running:
+
+        bash ~/Miniconda3-latest-Linux-x86_64.sh
+
+You have to scroll through Anaconda's Terms of Service and enter "yes" to agree. Then press Return to accept the default install location (PREFIX=/Users/<USER>/miniconda3), or enter another file path to specify an alternate installation directory. The installation might take a few minutes to complete.
+
+Next, you should choose the initialization option "yes", so that conda modifies your shell configuration to initialize conda whenever you open a new shell and to recognize conda commands automatically. If not, you will have to initialize manually, which is much harder.	
+
+
+Finally, close and re-open your terminal and check your installation by running:
+
+        conda list
+
+If it has been installed correctly, a list of packages should appear.
+
+
+**Step 2**: Create an environment on Anaconda or miniconda with Python 3.9
+
+Tutorial found at: https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
+
+To create an environment named "myosuite" with a specific version of Python:
+
+        conda create -n myosuite python=3.9
+
+This will create the environment inside the "envs" folder in the miniconda installation folder
+
+To activate the environment (which you will have to do every time you turn on the computer or the virtual machine) you have to run:
+
+        conda activate myosuite
+
+To deactivate the environment run:
+
+        conda deactivate myosuite
+
+
+**Step 3**: Install de myosuite packages
+
+Tutorial found at: https://pypi.org/project/MyoSuite/
+
+Activate the myosuite environment in miniconda by running:
+
+        conda activate myosuite
+
+Once inside the environment, install MyoSuite with:
+
+        pip install -U myosuite
+
+Test your installation using the following command (this will return also a list of all the current environments, which may take a while):
+
+        python -m myosuite.tests.test_myo
+
+You can also visualize the environments with random controls using the command below:
+
+        python -m myosuite.utils.examine_env --env_name myoElbowPose1D6MRandom-v0
+
+
+**Step 4**: Download the github package NAIR_envs from https://github.com/AndresChS/NAIR_envs/tree/main
+
+        git clone https://github.com/AndresChS/NAIR_envs.git
+
+**Step 5**: Copy the contents of the folder /NAIR_envs-main/myosuite/nair_envs/nair_envs found at the github into a new folder named "nair" in the folder:
+
+/miniconda3/envs/myosuite/lib/python3.9/site-packages/myosuite/envs
+
+It should be next to a folder named "myo", which contains all the myosuite environments you have previously tested.
+
+
+**Step 6**: Go to the folder /miniconda3/envs/myosuite/lib/python3.9/site-packages/myosuite and open the `__init__.py` file.
+
+After the block headed by "# Register NAIRGroup Suite" and before the "# All myosuite Envs", which should be around line 46 in the `__init__.py` file, paste the following lines:
+
+        # Register NAIRGroup Suite
+        import myosuite.envs.nair # noqa
+        myosuite_nair_suite = set(gym_registry_specs().keys())
+        myosuite_env_suite-_current_gym_envs
+        myosuite_env_suite  = myosuite_env_suite | myosuite_nair_suite
+        myosuite_nair_suite = sorted(myosuite_nair_suite)
+
+
+**Step 7**: Go to the folder /miniconda3/envs/myosuite/lib/python3.9/site-packages/myosuite/envs/nair and open the `__init__.py` file.
+
+In line 16, the 'model_path' should have an absolute path to the myoleg_spasticity_muscexo_V0.xml, so you must change it to reflect where you have this file. It should look something like this:
+
+        'model_path': '/home/athens/miniconda3/envs/myosuite/lib/python3.9/site-packages/myosuite/envs/nair/myoleg_spasticity_muscexo/myoleg_spasticity_muscexo_V0.xml', # where the xml file of the environment is located
+
+
+**Step 8**: To try this myosuite environment, you have to write a python script to launch it. To do so, create a new .py file (its location is not important) with the following contents:
+
+        from myosuite.utils import gym
+        env = gym.make('ExoLegSpasticityFlexoExtEnv-v0')
+        env.reset()
+        for _ in range(1000):
+            env.mj_render()
+            env.step(env.action_space.sample()) # take a random action
+        env.close()
+
+This is an adaptation from the tutorial found at: https://myosuite.readthedocs.io/en/latest/tutorials.html
+
+Running this python script (all within the miniconda myosuite environment) will launch the myosuite environment called 'ExoLegSpasticityFlexoExtEnv-v0', render it (creating a new window with the visual representation), and perform a series of random actions inside the environment.
+
+This tutorial was made by Jorge Gómez Aguilar
