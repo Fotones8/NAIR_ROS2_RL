@@ -39,6 +39,8 @@ class Myoleg_env_v0(BaseV0,env_base.MujocoEnv):
 
     def __init__(self, model_path, obsd_model_path=None, seed=None, **kwargs):
 
+        # We create the server in the port specified by the socket_server.bind().
+        # If we encounter an error, we should change the port.
         print("Starting server")
         self.socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_server.bind(('localhost', 9997))
