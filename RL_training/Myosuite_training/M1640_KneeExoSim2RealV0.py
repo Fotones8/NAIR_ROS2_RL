@@ -3,7 +3,7 @@
 #	This model is generated with tacking the Myosuite conversion of [Rajagopal's full body gait model](https://github.com/opensim-org/opensim-models/tree/master/Models/RajagopalModel) as close
 #reference.
 #	Model	  :: MyoLeg 1 Dof 40 Musc Exo (MuJoCoV2.0)
-#	Author	:: Andres Chavarrias (andreschavarriassanchez@gmail.com), David Rodriguez, Pablo Lanillos 
+#	Author	:: Andres Chavarrias (andreschavarriassanchez@gmail.com), Jorge Gomez, David Rodriguez, Pablo Lanillos 
 #	source	:: https://github.com/AndresChS/NAIR_Code
 #	====================================================== -->
 import collections
@@ -40,7 +40,7 @@ class Myoleg_env_v0(BaseV0,env_base.MujocoEnv):
     def __init__(self, model_path, obsd_model_path=None, seed=None, **kwargs):
 
         # We create the server in the port specified by the socket_server.bind().
-        # If we encounter an error, we should change the port.
+        # If we encounter an error, we should change the port (which must be the same as the client socket).
         print("Starting server")
         self.socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket_server.bind(('localhost', 9997))
@@ -391,7 +391,11 @@ class Myoleg_env_v0(BaseV0,env_base.MujocoEnv):
         return muscle_a
     
     def process_msg(self, msg):
-        variables = msg.split(", ")  # Assuming the message is a comma-separated string
+        """
+        This method changes the message from a string to a float list
+        From "1.0, 2.0, 3.0, 4.0" into [1.0, 2.0, 3.0, 4.0]
+        """
+        variables = msg.split(", ")  # We separe the message assuming it is a comma-separated string
         i =  0
         for var in variables:
             variables[i] = float(var)
@@ -436,33 +440,34 @@ class Myoleg_env_v0(BaseV0,env_base.MujocoEnv):
         #print(muscle_a, "-----")
         self.excess_force_prev = self.sim.data.qfrc_constraint[6]
         
-        """Here we need to set our motor socket"""
-        client_socket, addr = self.socket_server.accept() #Esta llamada bloquea hasta que un cliente se conecta
+        """Here we set our motor socket, first we send the action and then we receive the observation"""
+        client_socket, addr = self.socket_server.accept() # This line blocks the programme until a socket client is connected
         #print(f"Connection from {addr} has been established!")
 
-        try:
+        try:        # We send the action as a string through the socket
             action = str(muscle_a[0])
             client_socket.sendall(action.encode())
 
-        finally:
+        finally:    # We close the socket
             client_socket.close()
             #print("Connection closed.")
     
-        client_socket, addr = self.socket_server.accept() #Esta llamada bloquea hasta que un cliente se conecta
+        client_socket, addr = self.socket_server.accept() # This line blocks the programme until a socket client is connected
         #print(f"Connection from {addr} has been established!")
-        try:
-        
-            data = client_socket.recv(1024) #Se guarda en data aunque no lo leas directamente
+
+        try:        # We receive the information from the motor and substitute it in the observations
+            data = client_socket.recv(1024) # We receive the message from the socket
             #print(f"Received observation before parsing: {data.decode()}")
-            observation = self.process_msg(data.decode()) #TO DO: pasar las observaciones al modelo de myosuite
+            observation = self.process_msg(data.decode()) # We transform the observations into a float list
             #print(f"Received observation after parsing: {observation}")
 
+            # We change the observations using the values from the motor
             self.sim.data.qpos[6] = observation[0]
             self.sim.data.qvel[6] = observation[1]
             self.sim.data.qacc[6] = observation[2]
             self.sim.data.qfrc_constraint[6] = observation[3]
 
-        finally:
+        finally:    # We close the socket
             client_socket.close()
             #print("Connection closed.")
 
