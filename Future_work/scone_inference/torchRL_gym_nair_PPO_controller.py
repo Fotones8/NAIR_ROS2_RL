@@ -32,7 +32,7 @@ warnings.filterwarnings("ignore")
 from torch import multiprocessing
 
 from NAIR_code.RL.scone.Torch.src.lib.nair.agents.nair_agents import get_models
-sconegym_path = os.path.abspath(os.path.join(os.path.dirname(__file__), './NAIR_envs')) 
+sconegym_path = os.path.abspath(os.path.join(os.path.dirname(__file__), './NAIR_envs')) # TO DO: probablemente haya que cambiar las rutas por rutas absolutas. ROS2 ejecuta desde un sitio distinto a donde está el archivo .py
 sys.path.append(sconegym_path)
 print(sconegym_path)
 import NAIR_envs.sconegym # type: ignore
